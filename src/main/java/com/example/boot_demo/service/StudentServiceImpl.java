@@ -6,6 +6,14 @@ import com.example.boot_demo.dao.StudentRepository;
 import com.example.boot_demo.dto.StudentDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.util.Collection;
+import java.util.List;
 
 @Service
 public class StudentServiceImpl implements StudentService{
@@ -18,4 +26,40 @@ public class StudentServiceImpl implements StudentService{
         Student student = studentRepository.findById(id).orElseThrow(RuntimeException::new);
         return StudentConverter.convertStudent(student);
     }
+
+    @Override
+    public long addNewStudent(StudentDTO studentDTO) {
+        // Uniqueness Check
+        List<Student> studentList = studentRepository.findByEmail(studentDTO.getEmail());
+        if (!CollectionUtils.isEmpty(studentList)){
+            throw new IllegalStateException("email: " + studentDTO.getEmail() + "has been taken.");
+        }
+       Student student = studentRepository.save(StudentConverter.convertStudent(studentDTO));
+        return student.getId();
+    }
+
+    @Override
+    public void deleteStudentById(long id) {
+        studentRepository.findById(id).orElseThrow(()->new IllegalArgumentException("id:" + id + "doesn't exit."));
+        studentRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public StudentDTO updateStudentById(long id, String name, String email) {
+        Student studentInDB = studentRepository.findById(id).orElseThrow(()->new IllegalArgumentException("id:" + id + "doesn't exit."));
+
+        if (StringUtils.hasLength(name) && !studentInDB.getName().equals(name)){
+            studentInDB.setName(name);
+        }
+
+        if (StringUtils.hasLength(email) && !studentInDB.getEmail().equals(email)){
+            studentInDB.setEmail(email);
+        }
+
+        Student student = studentRepository.save(studentInDB);
+        return StudentConverter.convertStudent(student);
+    }
+
+
 }
